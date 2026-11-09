@@ -335,14 +335,27 @@ class Cube3D{
 /* ===== CubeAnimator: nội suy góc xoay bằng GSAP (requestAnimationFrame), xoay từng lớp ===== */
 const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 class CubeAnimator{
- constructor(model){this.model=model;this.cur=null;this.speed=1;}
- turn(mv){return new Promise(res=>{
-  const h=this.model.begin(mv),p={a:0},dur=reduceMotion()?.01:Math.abs(mv.q)===2?.66:.46;
-  const tw=gsap.to(p,{a:mv.angle,duration:dur,ease:'power2.inOut',onUpdate:()=>h.set(p.a),onComplete:()=>{h.end(mv.angle);this.cur=null;res(true);}});
-  tw.timeScale(this.speed);this.cur={tw,h,res};});}
+ constructor(model,holder){this.model=model;this.holder=holder;this.cur=null;this.speed=1;this.q=null;}
+ // thân khối nghiêng nhẹ theo hướng tay vặn, rồi trả về thẳng (quickTo: một tween dùng lại, không tạo tween mới mỗi lần)
+ lean(axis,v){const r=this.holder.rotation,o={duration:.35,ease:'power3.out'};
+  if(!this.q)this.q={x:gsap.quickTo(r,'x',o),y:gsap.quickTo(r,'y',o),z:gsap.quickTo(r,'z',o)};
+  for(const k of 'xyz')this.q[k](k===axis?v:0);}
+ // một lượt vặn như người thật: nhún lấy đà -> vung tay hơi lố -> khớp lại vào vị trí
+ turn(mv,prev){return new Promise(res=>{
+  const h=this.model.begin(mv),p={a:0},A=mv.angle,d=Math.sign(A),half=Math.abs(mv.q)===2,quick=reduceMotion();
+  const T=quick?.01:(half?.5:.34)*gsap.utils.random(.92,1.08,.01);        // mỗi lượt nhanh chậm hơi khác nhau
+  const gap=quick||!prev||prev.axis===mv.axis?0:.06;                        // đổi trục = đổi tay cầm, khựng nhẹ
+  const tl=gsap.timeline({delay:gap,onUpdate:()=>h.set(p.a),onComplete:()=>{
+   h.end(A);this.cur=null;res(true);
+   gsap.delayedCall(.15,()=>{if(!this.cur)this.lean('x',0);});}});          // hết chuỗi thì khối đứng thẳng lại
+  tl.add(()=>this.lean(mv.axis,d*(half?.06:.04)))
+    .to(p,{a:-d*.06,duration:quick?0:.07,ease:'power1.out'})
+    .to(p,{a:A+d*(half?.17:.12),duration:T,ease:'power2.inOut'})
+    .to(p,{a:A,duration:quick?0:.11,ease:'power2.out'});
+  tl.timeScale(this.speed);this.cur={tw:tl,h,res};});}
  pause(){if(this.cur)this.cur.tw.pause();}
  resume(){if(this.cur)this.cur.tw.resume();}
- cancel(){const c=this.cur;if(!c)return;c.tw.kill();c.h.abort();this.cur=null;c.res(false);}
+ cancel(){const c=this.cur;if(!c)return;c.tw.kill();c.h.abort();this.cur=null;this.lean('x',0);c.res(false);}
  setSpeed(s){this.speed=s;if(this.cur)this.cur.tw.timeScale(s);}
 }
 
@@ -357,7 +370,7 @@ class SolutionController{
   m.restore(this.snaps[0]);this.moves=ok?moves:[];this.idx=0;this.onUpdate();return ok;}
  clear(){this.halt();this.moves=[];this.snaps=[];this.idx=0;this.model.restore(this.model.home);this.onUpdate();}
  halt(){this.loop++;this.playing=false;this.anim.cancel();}
- async step(k){const ok=await this.anim.turn(this.moves[k]);if(ok){this.idx=k+1;this.onStep();this.onUpdate();}return ok;}
+ async step(k){const ok=await this.anim.turn(this.moves[k],k>0?this.moves[k-1]:null);if(ok){this.idx=k+1;this.onStep();this.onUpdate();}return ok;}
  async autoplay(){const id=++this.loop;this.playing=true;this.onUpdate();
   while(this.playing&&id===this.loop&&this.idx<this.n){if(!await this.step(this.idx)||id!==this.loop)return;}
   if(id===this.loop){this.playing=false;this.onUpdate();if(this.idx>=this.n&&this.n)this.onDone();}}
@@ -377,7 +390,7 @@ class UIController{
  constructor(){
   this.cm=new ColorManager();this.inp=new RubikInput(this.cm,()=>this.onCells());this.check=null;
   this.solver=new CubeSolver(s=>this.solverState(s));
-  this.c3=new Cube3D($('#gl'));this.anim=new CubeAnimator(this.c3.model);
+  this.c3=new Cube3D($('#gl'));this.anim=new CubeAnimator(this.c3.model,this.c3.holder);
   this.sc=new SolutionController(this.c3.model,this.anim,()=>this.renderSol(),()=>this.tick(),()=>this.finished());
   this.buildStatic();this.bind();this.onCells();this.renderSol();this.intro();
  }
