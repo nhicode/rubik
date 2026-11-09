@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rubik Solver 3D – Giải Rubik 3×3 từng bước</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1422;--p:#151d31;--p2:#1d2742;--ln:#2c3a5c;--tx:#e9edf7;--mu:#97a4c2;--ac:#ff7a1a;--ok:#46d39a;--er:#ff7b7b;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;background:radial-gradient(900px 520px at 78% -8%,#1e2f58,transparent 70%),var(--bg);color:var(--tx);font:400 15px/1.5 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);-webkit-text-size-adjust:100%}
+h1,h2,p{margin:0}
+h2{font-size:17px;font-weight:800;margin-bottom:10px}
+.top{display:flex;align-items:center;gap:14px;padding:12px 16px;max-width:1320px;margin:0 auto;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;margin-right:auto}
+.brand svg{width:38px;height:38px;flex:none}
+.brand b{display:block;font-size:19px;font-weight:800;line-height:1.1}
+.brand span{font-size:13px;color:var(--mu)}
+.pill{padding:6px 12px;border-radius:99px;background:var(--p2);border:1px solid var(--ln);font-size:13px;color:var(--mu)}
+.pill[data-k=ok]{color:var(--ok);border-color:#2c6b57}.pill[data-k=err]{color:var(--er);border-color:#7a3a3a}
+main{display:grid;gap:16px;padding:0 16px 24px;max-width:1320px;margin:0 auto}
+@media(min-width:1000px){main{grid-template-columns:minmax(340px,400px) 1fr;grid-template-areas:"inp stage" "inp sol";align-items:start}#inp{grid-area:inp}#stage{grid-area:stage}#sol{grid-area:sol}}
+.panel{background:var(--p);border:1px solid var(--ln);border-radius:16px;padding:16px;position:relative}
+.btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--ln);background:var(--p2);color:var(--tx);font:600 14px "Be Vietnam Pro",system-ui,sans-serif;cursor:pointer;touch-action:manipulation;transition:transform .12s,background .2s,border-color .2s}
+.btn:hover:not(:disabled){background:#27345a;border-color:#4a5d92}.btn:active:not(:disabled){transform:scale(.97)}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#1c0e03;font-weight:800}.btn.pri:hover:not(:disabled){background:#ff913f;border-color:#ff913f}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.row .btn{flex:1 1 auto}
+.tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.tab{min-height:44px;border-radius:10px;border:1px solid var(--ln);background:var(--p2);color:var(--mu);font:800 15px "Be Vietnam Pro",sans-serif;cursor:pointer}
+.tab[aria-selected=true]{background:var(--tx);color:#10182c;border-color:var(--tx)}
+.hint{font-size:13px;color:var(--mu);margin-top:8px;min-height:40px}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,300px);margin:10px auto}
+.cell{aspect-ratio:1;min-height:56px;border-radius:10px;border:2px solid #0008;cursor:pointer;position:relative;background:repeating-linear-gradient(45deg,#232e4d 0 6px,#1b2441 6px 12px);touch-action:manipulation;transition:transform .1s}
+.cell:active{transform:scale(.94)}
+.cell.sel{outline:3px solid #fff;outline-offset:1px}
+.cell.ctr::after{content:"";position:absolute;inset:auto 6px 6px auto;width:8px;height:8px;border-radius:50%;background:#0007;box-shadow:0 0 0 1.5px #fff8}
+.pal{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.sw{min-height:48px;border-radius:10px;border:2px solid transparent;cursor:pointer;font:700 12px "Be Vietnam Pro",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#111;touch-action:manipulation}
+.sw[aria-pressed=true]{border-color:#fff;box-shadow:0 0 0 2px #0e1422 inset}
+.sw small{font-weight:600;font-size:11px}.sw.over small{color:#a30000;font-weight:800}
+.sw.era{background:var(--p2);color:var(--tx);border:2px dashed var(--ln)}
+.net{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-width:260px;margin:14px auto 0}
+.mini{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5px;padding:2px;border-radius:5px;border:1.5px solid transparent;background:none;cursor:pointer}
+.mini[aria-current=true]{border-color:#fff}.mini i{aspect-ratio:1;border-radius:2px;background:#232e4d}
+.chk{margin-top:12px;display:grid;gap:6px;font-size:14px}
+.msg{padding:8px 12px;border-left:4px solid var(--mu);background:var(--p2);border-radius:6px}
+.msg.ok{border-color:var(--ok)}.msg.er{border-color:var(--er)}
+#gl{height:min(62vh,540px);min-height:320px;border-radius:12px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#22345f,#121a2e 70%)}
+#gl canvas{display:block;width:100%;height:100%;touch-action:none}
+.views{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.views .btn{min-height:40px;padding:0 12px}.views label{margin-left:auto;display:flex;gap:8px;align-items:center;font-size:14px;min-height:44px}
+.cap{font-size:12px;color:var(--mu);margin-top:6px}
+.busy{position:absolute;inset:0;border-radius:16px;background:#0e1422d9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:5;font-weight:600}
+.busy[hidden]{display:none}
+.spin{width:38px;height:38px;border-radius:50%;border:4px solid var(--ln);border-top-color:var(--ac);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.meta{display:flex;gap:16px;flex-wrap:wrap;color:var(--mu);font-size:14px;margin-bottom:8px}.meta b{color:var(--tx)}
+.algo{display:flex;gap:8px;align-items:flex-start}
+.algo code{flex:1;display:block;padding:10px 12px;background:#0b101d;border:1px solid var(--ln);border-radius:10px;font:600 14px/1.7 ui-monospace,Menlo,Consolas,monospace;word-break:break-word;min-height:44px}
+.now{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center;margin:12px 0;padding:12px 14px;background:var(--p2);border:1px solid var(--ln);border-radius:12px;min-height:84px}
+.now .chip{grid-row:span 2;font:800 30px/1 "Be Vietnam Pro",sans-serif;min-width:70px;text-align:center;background:var(--ac);color:#1c0e03;border-radius:12px;padding:12px 8px}
+.now .chip i{font-style:normal;display:block;font-size:20px;margin-top:2px}
+.now p{font-size:14px}.now .st{font-size:13px;color:var(--mu)}
+input[type=range]{width:100%;accent-color:var(--ac);min-height:32px}
+.ctl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
+@media(min-width:620px){.ctl{grid-template-columns:repeat(6,1fr)}}
+.ctl select{min-height:44px;border-radius:10px;background:var(--p2);color:var(--tx);border:1px solid var(--ln);font:600 14px "Be Vietnam Pro",sans-serif;padding:0 8px}
+#list{list-style:none;margin:10px 0 0;padding:0;max-height:260px;overflow:auto;position:relative;display:grid;gap:6px}
+#list button{width:100%;text-align:left;display:grid;grid-template-columns:34px 52px 1fr auto;gap:8px;align-items:center;min-height:44px;padding:6px 10px;border-radius:10px;border:1px solid var(--ln);background:var(--p2);color:var(--tx);font:400 13px "Be Vietnam Pro",sans-serif;cursor:pointer}
+#list b.n{color:var(--mu);font-variant-numeric:tabular-nums}
+#list b.m{font:800 16px ui-monospace,Menlo,monospace;text-align:center;background:#0b101d;border-radius:8px;padding:4px 0}
+#list li.cur button{border-color:var(--ac);background:#3a2410}
+#list li.done button{opacity:.6}#list li.done b.m{color:var(--ok)}
+.legend{margin-top:12px;font-size:13px;color:var(--mu)}.legend summary{cursor:pointer;min-height:32px;color:var(--tx);font-weight:600}
+.legend div{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2px 12px;margin-top:6px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:50;max-width:min(92vw,520px);padding:12px 18px;border-radius:12px;background:#0b101d;border:1px solid var(--ln);font-weight:600;opacity:0;visibility:hidden}
+#toast[data-k=ok]{border-color:var(--ok)}#toast[data-k=err]{border-color:var(--er)}
+dialog{max-width:min(92vw,560px);border:1px solid var(--ln);border-radius:16px;background:var(--p);color:var(--tx);padding:20px}
+dialog::backdrop{background:#000a}dialog li{margin:6px 0}
+.fallback{padding:40px 16px;text-align:center;color:var(--mu)}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header class="top">
+ <div class="brand">
+  <svg viewBox="0 0 38 38" aria-hidden="true"><g id="logo"></g></svg>
+  <div><b>Rubik Solver 3D</b><span>Giải Rubik 3×3 từng bước</span></div>
+ </div>
+ <span id="status" class="pill" role="status">Đang tải bộ giải…</span>
+ <button class="btn" id="btnHelp">Hướng dẫn</button>
+</header>
+
+<main>
+ <section class="panel" id="inp" aria-labelledby="h-inp">
+  <h2 id="h-inp">1. Nhập màu 54 ô</h2>
+  <div class="tabs" id="tabs" role="tablist" aria-label="Chọn mặt Rubik"></div>
+  <p class="hint" id="hint"></p>
+  <div class="board" id="board"></div>
+  <p class="cap" id="cellinfo" aria-live="polite" style="text-align:center">Chọn một màu rồi chạm vào ô để tô.</p>
+  <div class="pal" id="pal" role="group" aria-label="Bảng màu"></div>
+  <div class="row">
+   <button class="btn" id="btnUndo">Hoàn tác</button>
+   <button class="btn" id="btnClear">Xóa tất cả</button>
+   <button class="btn" id="btnSolved">Mẫu đã giải</button>
+   <button class="btn" id="btnShuffle">Xáo trộn ngẫu nhiên</button>
+  </div>
+  <div class="net" id="net" aria-label="Bản đồ 6 mặt"></div>
+  <div class="chk" id="chk" aria-live="polite"></div>
+  <div class="row">
+   <button class="btn" id="btnCheck">Kiểm tra Rubik</button>
+   <button class="btn pri" id="btnSolve" disabled>Bắt đầu giải</button>
+  </div>
+ </section>
+
+ <section class="panel" id="stage" aria-label="Mô hình 3D">
+  <div id="gl"></div>
+  <div class="views">
+   <button class="btn" data-v="def">Góc mặc định</button>
+   <button class="btn" data-v="front">Trực diện</button>
+   <button class="btn" data-v="top">Từ trên xuống</button>
+   <label><input type="checkbox" id="snd"> Âm thanh xoay</label>
+  </div>
+  <p class="cap">Kéo để xoay góc nhìn · cuộn hoặc chụm hai ngón để phóng to. Xoay góc nhìn không đổi trạng thái Rubik.</p>
+  <div class="busy" id="busy" hidden><div class="spin"></div><span>Đang tính lời giải…</span></div>
+ </section>
+
+ <section class="panel" id="sol" aria-labelledby="h-sol">
+  <h2 id="h-sol">2. Lời giải</h2>
+  <div class="meta"><span>Số bước: <b id="mN">–</b></span><span>Đã xong: <b id="mD">–</b></span><span>Thời gian tính: <b id="mT">–</b></span></div>
+  <div class="algo"><code id="algo">Chưa có lời giải. Nhập màu, kiểm tra rồi bấm “Bắt đầu giải”.</code><button class="btn" id="btnCopy" disabled>Sao chép</button></div>
+  <div class="now" id="now" aria-live="polite"><div class="chip">–</div><p>Chưa có bước nào.</p><span class="st"></span></div>
+  <input type="range" id="prog" min="0" max="0" value="0" aria-label="Tiến trình giải" disabled>
+  <div class="ctl">
+   <button class="btn" id="bReset" disabled>Đặt lại</button>
+   <button class="btn" id="bPrev" disabled>Bước trước</button>
+   <button class="btn pri" id="bPlay" disabled>Bắt đầu</button>
+   <button class="btn" id="bNext" disabled>Bước tiếp</button>
+   <button class="btn" id="bReplay" disabled>Chạy lại</button>
+   <select id="spd" aria-label="Tốc độ"><option value=".25">0.25x</option><option value=".5">0.5x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option><option value="2">2x</option><option value="3">3x</option></select>
+  </div>
+  <ol id="list"></ol>
+  <details class="legend"><summary>Ý nghĩa ký hiệu xoay</summary><div id="legend"></div></details>
+ </section>
+</main>
+
+<dialog id="help">
+ <h2>Hướng dẫn nhanh</h2>
+ <ol>
+  <li>Chọn một màu ở bảng màu, rồi chạm vào các ô cần tô. Dùng 6 tab U R F D L B để đổi mặt.</li>
+  <li>Cầm Rubik thật theo đúng gợi ý ở mỗi mặt (dòng chữ dưới các tab). Ô có chấm đen là viên tâm.</li>
+  <li>Bấm “Kiểm tra Rubik”. Nếu sai, hệ thống nói rõ nguyên nhân.</li>
+  <li>Bấm “Bắt đầu giải”. Mô hình 3D tự xoay từng bước; bạn có thể tạm dừng, lùi, tiến hoặc bấm vào một bước trong danh sách.</li>
+ </ol>
+ <p class="cap">Mặt được xác định theo màu tâm nên bạn có thể dùng bảng màu của bất kỳ Rubik nào. Không cần Rubik thật? Thử “Mẫu đã giải” hoặc “Xáo trộn ngẫu nhiên”.</p>
+ <div class="row"><button class="btn pri" id="btnHelpClose">Đã hiểu</button></div>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+'use strict';
+/*CORE-START*/
+/* ===== Quy ước chuẩn Kociemba/Singmaster: thứ tự mặt U R F D L B, mỗi mặt 9 ô đọc từng hàng, trái→phải, trên→dưới ===== */
+const FACES='URFDLB', SOLVED=FACES.split('').map(f=>f.repeat(9)).join('');
+const FACE_VI={U:'mặt trên',R:'mặt phải',F:'mặt trước',D:'mặt dưới',L:'mặt trái',B:'mặt sau'};
+const COLORS=[{n:'Trắng',h:'#f2f2ee'},{n:'Vàng',h:'#ffd400'},{n:'Đỏ',h:'#d32f2f'},{n:'Cam',h:'#ff7a00'},{n:'Xanh dương',h:'#1565d8'},{n:'Xanh lá',h:'#14a44d'}];
+const SCHEME=[0,2,5,1,3,4]; // U trắng, R đỏ, F xanh lá, D vàng, L cam, B xanh dương
+const CENTERS=[4,13,22,31,40,49];
+// vị trí (x,y,z) và pháp tuyến của ô thứ i (x: trái→phải, y: dưới→trên, z: sau→trước)
+const GEOM=Array.from({length:54},(_,i)=>{const f=i/9|0,r=(i%9)/3|0,c=i%3;
+ return [{p:[c-1,1,r-1],n:[0,1,0]},{p:[1,1-r,1-c],n:[1,0,0]},{p:[c-1,1-r,1],n:[0,0,1]},{p:[c-1,-1,1-r],n:[0,-1,0]},{p:[-1,1-r,c-1],n:[-1,0,0]},{p:[1-c,1-r,-1],n:[0,0,-1]}][f]});
+const GKEY=new Map(GEOM.map((g,i)=>[g.p.join()+'|'+g.n.join(),i]));
+const FACE_HINT={
+ U:'Cầm Rubik sao cho mặt U hướng lên, mặt F quay về phía bạn. Nhìn từ trên xuống: hàng trên của bảng là phía mặt B, hàng dưới là phía mặt F.',
+ R:'Nhìn thẳng vào mặt phải. Cạnh trên của bảng là mặt U; bên trái bảng là phía mặt F, bên phải là phía mặt B.',
+ F:'Nhìn thẳng vào mặt trước. Cạnh trên của bảng là mặt U; bên trái là mặt L, bên phải là mặt R.',
+ D:'Lật Rubik nhìn từ dưới lên. Hàng trên của bảng sát mặt F, hàng dưới sát mặt B; bên trái bảng là phía mặt L.',
+ L:'Nhìn thẳng vào mặt trái. Cạnh trên của bảng là mặt U; bên trái là phía mặt B, bên phải là phía mặt F.',
+ B:'Nhìn thẳng vào mặt sau. Cạnh trên của bảng là mặt U; bên trái là phía mặt R, bên phải là phía mặt L.'};
+
+/* ===== MoveParser ===== */
+const AXIS={R:'x',L:'x',U:'y',D:'y',F:'z',B:'z'};
+const SIGN={R:-1,U:-1,F:-1,L:1,D:1,B:1}; // chiều kim đồng hồ khi nhìn thẳng vào mặt, quy đổi sang trục Three.js (tay phải)
+const LAYER={R:p=>p.x>.5,L:p=>p.x<-.5,U:p=>p.y>.5,D:p=>p.y<-.5,F:p=>p.z>.5,B:p=>p.z<-.5};
+class MoveParser{
+ static parse(s){return (s||'').trim().split(/\s+/).filter(Boolean).map(t=>{
+  const m=/^([URFDLB])(2|')?$/.exec(t); if(!m) throw new Error('Ký hiệu không hợp lệ: '+t);
+  const q=m[2]==='2'?2:m[2]==="'"?-1:1; return {t,f:m[1],q,axis:AXIS[m[1]],angle:SIGN[m[1]]*q*Math.PI/2};});}
+ static text(m){const deg=Math.abs(m.q)===2?'180° (hai lần 90°)':'90°', dir=Math.abs(m.q)===2?'':m.q>0?' theo chiều kim đồng hồ':' ngược chiều kim đồng hồ';
+  return `Xoay ${FACE_VI[m.f]} ${deg}${dir}`;}
+ static scramble(n=22){const out=[];let last=-1;while(out.length<n){const f=Math.random()*6|0;if(f%3===last%3)continue;last=f;out.push(FACES[f]+["","'","2"][Math.random()*3|0]);}return out.join(' ');}
+}
+
+/* ===== CubeValidator ===== */
+const fx=s=>s.split(' ').map(t=>({U:0,R:9,F:18,D:27,L:36,B:45}[t[0]]+ +t[1]-1));
+const CORNER_F=['U9 R1 F3','U7 F1 L3','U1 L1 B3','U3 B1 R3','D3 F9 R7','D1 L9 F7','D7 B9 L7','D9 R9 B7'].map(fx);
+const CORNER_C=['URF','UFL','ULB','UBR','DFR','DLF','DBL','DRB'];
+const EDGE_F=['U6 R2','U8 F2','U4 L2','U2 B2','D6 R8','D2 F8','D4 L8','D8 B8','F6 R4','F4 L6','B6 L4','B4 R6'].map(fx);
+const EDGE_C=['UR','UF','UL','UB','DR','DF','DL','DB','FR','FL','BL','BR'];
+const parity=p=>{let c=0;for(let i=0;i<p.length;i++)for(let j=i+1;j<p.length;j++)if(p[i]>p[j])c++;return c&1;};
+class CubeValidator{
+ static validate(cells){
+  const E=[],miss=cells.filter(c=>c<0).length,cnt=Array(6).fill(0);
+  if(miss)E.push(`Còn thiếu ${miss} ô chưa tô màu (đã tô ${54-miss}/54).`);
+  cells.forEach(c=>{if(c>=0)cnt[c]++;});
+  cnt.forEach((n,c)=>{if(n>9)E.push(`Màu ${COLORS[c].n.toLowerCase()} xuất hiện ${n} lần (cần đúng 9).`);else if(!miss&&n<9)E.push(n?`Màu ${COLORS[c].n.toLowerCase()} chỉ xuất hiện ${n} lần (cần đúng 9).`:`Thiếu màu ${COLORS[c].n.toLowerCase()} (xuất hiện 0 lần, cần đúng 9).`);});
+  const ctr=CENTERS.map(i=>cells[i]),of={};
+  ctr.forEach((c,f)=>{if(c<0)return;if(c in of)E.push(`Màu tâm bị trùng: mặt ${FACES[of[c]]} và mặt ${FACES[f]} cùng màu ${COLORS[c].n.toLowerCase()}.`);else of[c]=f;});
+  if(E.length)return {ok:false,errors:E};
+  const L=cells.map(c=>FACES[of[c]]),cp=[],co=[],ep=[],eo=[];
+  for(let i=0;i<8;i++){const s=CORNER_F[i].map(k=>L[k]);let o=s.findIndex(x=>x==='U'||x==='D');
+   const k=o<0?-1:CORNER_C.findIndex(n=>n[0]===s[o]&&n[1]===s[(o+1)%3]&&n[2]===s[(o+2)%3]);
+   if(k<0){E.push(`Viên góc tại ${CORNER_C[i]} (ô ${CORNER_F[i].map(j=>FACES[j/9|0]+(j%9+1)).join(', ')}) có tổ hợp màu không tồn tại trên Rubik chuẩn.`);continue;}
+   cp[i]=k;co[i]=o;}
+  for(let i=0;i<12;i++){const a=L[EDGE_F[i][0]],b=L[EDGE_F[i][1]];let k=-1,o=0;
+   EDGE_C.forEach((n,j)=>{if(n[0]===a&&n[1]===b){k=j;o=0;}else if(n[0]===b&&n[1]===a){k=j;o=1;}});
+   if(k<0){E.push(`Viên cạnh tại ${EDGE_C[i]} (ô ${EDGE_F[i].map(j=>FACES[j/9|0]+(j%9+1)).join(', ')}) có tổ hợp màu không tồn tại trên Rubik chuẩn.`);continue;}
+   ep[i]=k;eo[i]=o;}
+  if(E.length)return {ok:false,errors:E};
+  if(new Set(cp).size<8)E.push('Có viên góc bị lặp (cùng một viên xuất hiện hai lần), nên không thể có trên Rubik thật.');
+  if(new Set(ep).size<12)E.push('Có viên cạnh bị lặp (cùng một viên xuất hiện hai lần), nên không thể có trên Rubik thật.');
+  if(E.length)return {ok:false,errors:E};
+  if(co.reduce((a,b)=>a+b)%3)E.push('Một viên góc bị xoắn: tổng độ xoắn của 8 góc không chia hết cho 3. Trạng thái này không đạt được bằng các lượt xoay hợp lệ.');
+  if(eo.reduce((a,b)=>a+b)%2)E.push('Một viên cạnh bị lật: tổng độ lật của 12 cạnh phải là số chẵn. Trạng thái này không đạt được bằng các lượt xoay hợp lệ.');
+  if(parity(cp)!==parity(ep))E.push('Sai tính chẵn lẻ hoán vị: hai viên (góc hoặc cạnh) bị đổi chỗ. Trạng thái này không đạt được bằng các lượt xoay hợp lệ.');
+  if(E.length)return {ok:false,errors:E};
+  const letters=L.join('');return {ok:true,letters,faceIdx:L.map(x=>FACES.indexOf(x)),solved:letters===SOLVED,cp,co,ep,eo};
+ }
+}
+
+/* ===== CubeModel: nguồn trạng thái duy nhất (27 cubie, vị trí + hướng xoay) ===== */
+class CubeModel{
+ constructor(){
+  this.root=new THREE.Group();this.cubies=[];
+  for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){const g=new THREE.Group();g.position.set(x,y,z);g.userData.st=[];this.root.add(g);this.cubies.push(g);}
+  GEOM.forEach((G,i)=>{const c=this.cubies.find(c=>c.position.x===G.p[0]&&c.position.y===G.p[1]&&c.position.z===G.p[2]);c.userData.st.push({i,n:new THREE.Vector3(...G.n)});});
+  this.home=this.snap();
+ }
+ snap(){return this.cubies.map(c=>[c.position.x,c.position.y,c.position.z,c.quaternion.x,c.quaternion.y,c.quaternion.z,c.quaternion.w]);}
+ restore(s){s.forEach((a,i)=>{this.cubies[i].position.set(a[0],a[1],a[2]);this.cubies[i].quaternion.set(a[3],a[4],a[5],a[6]);});}
+ facelets(vals){const out=Array(54),r=Math.round;
+  for(const c of this.cubies)for(const s of c.userData.st){const n=s.n.clone().applyQuaternion(c.quaternion),p=c.position;
+   out[GKEY.get([r(p.x),r(p.y),r(p.z)].join()+'|'+[r(n.x),r(n.y),r(n.z)].join())]=vals[s.i];}
+  return out;}
+ // bắt đầu xoay một lớp: gom cubie vào pivot ở tâm khối (trục đi qua tâm lớp)
+ begin(mv){
+  const layer=this.cubies.filter(c=>LAYER[mv.f](c.position)),pv=new THREE.Group();this.root.add(pv);layer.forEach(c=>pv.attach(c));
+  const back=()=>{layer.forEach(c=>this.root.attach(c));this.root.remove(pv);};
+  return {set:a=>{pv.rotation[mv.axis]=a;},abort:back,
+   end:a=>{pv.rotation[mv.axis]=a;pv.updateMatrixWorld(true);back();layer.forEach(c=>this.snapCubie(c));}};}
+ turn(mv){this.begin(mv).end(mv.angle);}
+ snapCubie(c){const r=Math.round;c.position.set(r(c.position.x),r(c.position.y),r(c.position.z));
+  const m=new THREE.Matrix4().makeRotationFromQuaternion(c.quaternion);m.elements=m.elements.map(v=>r(v));c.quaternion.setFromRotationMatrix(m);}
+}
+/*CORE-END*/
+
+/* ===== ColorManager: bảng màu đang chọn (-1 = tẩy) ===== */
+class ColorManager{constructor(){this.active=0;}}
+
+/* ===== RubikInput: 54 ô màu, 6 mặt, hoàn tác ===== */
+class RubikInput{
+ constructor(cm,onChange){this.cm=cm;this.onChange=onChange;this.face=0;this.sel=-1;this.undo=[];this.cells=Array(54).fill(-1);CENTERS.forEach((i,f)=>this.cells[i]=SCHEME[f]);}
+ checkpoint(){this.undo.push(this.cells.slice());if(this.undo.length>80)this.undo.shift();}
+ paint(i){const c=this.cm.active;this.sel=i;if(this.cells[i]!==c){this.checkpoint();this.cells[i]=c;}this.onChange();}
+ setAll(arr){this.checkpoint();this.cells=arr.slice();this.sel=-1;this.onChange();}
+ undoLast(){const s=this.undo.pop();if(!s)return false;this.cells=s;this.onChange();return true;}
+ counts(){const n=Array(6).fill(0);this.cells.forEach(c=>{if(c>=0)n[c]++;});return n;}
+}
+
+/* ===== CubeSolver: Kociemba (cubejs) chạy trong Web Worker, có timeout ===== */
+const CJS='https://cdn.jsdelivr.net/npm/cubejs@1.3.2/lib/';
+class CubeSolver{
+ constructor(onState){this.onState=onState;this.ready=false;this.id=0;this.pending=new Map();this.start();}
+ start(){
+  this.ready=false;this.onState('loading');
+  const src=`importScripts('${CJS}cube.js','${CJS}solve.js');Cube.initSolver();postMessage({ready:1});
+onmessage=e=>{try{postMessage({id:e.data.id,sol:Cube.fromString(e.data.s).solve()})}catch(x){postMessage({id:e.data.id,err:String(x&&x.message||x)})}}`;
+  try{
+   this.w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+   this.w.onmessage=e=>{const d=e.data;if(d.ready){this.ready=true;this.onState('ready');return;}
+    const p=this.pending.get(d.id);if(p){this.pending.delete(d.id);d.err?p.rej(new Error(d.err)):p.res(d.sol);}};
+   this.w.onerror=()=>{this.onState('error');this.pending.forEach(p=>p.rej(new Error('Bộ giải gặp lỗi khi chạy.')));this.pending.clear();};
+  }catch(e){this.w=null;this.loadMain();}
+ }
+ loadMain(){ // dự phòng nếu trình duyệt không hỗ trợ Worker từ Blob
+  const load=u=>new Promise((res,rej)=>{const s=document.createElement('script');s.src=u;s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+  load(CJS+'cube.js').then(()=>load(CJS+'solve.js')).then(()=>setTimeout(()=>{window.Cube.initSolver();this.ready=true;this.onState('ready');},50)).catch(()=>this.onState('error'));
+ }
+ solve(letters,timeout=30000){
+  return new Promise((res,rej)=>{
+   if(!this.ready)return rej(new Error('Bộ giải chưa sẵn sàng.'));
+   if(!this.w){setTimeout(()=>{try{res(window.Cube.fromString(letters).solve());}catch(e){rej(e);}},30);return;}
+   const id=++this.id,t=setTimeout(()=>{this.pending.delete(id);this.w.terminate();this.start();rej(new Error('Không tìm được lời giải trong thời gian cho phép. Hãy kiểm tra lại các màu đã nhập.'));},timeout);
+   this.pending.set(id,{res:v=>{clearTimeout(t);res(v);},rej:e=>{clearTimeout(t);rej(e);}});
+   this.w.postMessage({id,s:letters});});
+ }
+}
+
+/* ===== Cube3D: Three.js (cảnh, camera, 27 cubie, sticker) ===== */
+const EMPTY='#2a3555';
+class Cube3D{
+ constructor(host){
+  this.host=host;this.model=new CubeModel();
+  const sc=this.scene=new THREE.Scene();this.holder=new THREE.Group();this.holder.add(this.model.root);sc.add(this.holder);
+  const body=new THREE.BoxGeometry(.96,.96,.96),bm=new THREE.MeshStandardMaterial({color:0x10131b,roughness:.55,metalness:.1});
+  const sh=new THREE.Shape(),a=.41,r=.12;
+  sh.moveTo(-a+r,-a);sh.lineTo(a-r,-a);sh.quadraticCurveTo(a,-a,a,-a+r);sh.lineTo(a,a-r);sh.quadraticCurveTo(a,a,a-r,a);sh.lineTo(-a+r,a);sh.quadraticCurveTo(-a,a,-a,a-r);sh.lineTo(-a,-a+r);sh.quadraticCurveTo(-a,-a,-a+r,-a);
+  const sg=new THREE.ShapeGeometry(sh),z=new THREE.Vector3(0,0,1);
+  for(const c of this.model.cubies){c.add(new THREE.Mesh(body,bm));
+   for(const s of c.userData.st){const m=new THREE.Mesh(sg,new THREE.MeshStandardMaterial({color:EMPTY,roughness:.38,metalness:0}));m.quaternion.setFromUnitVectors(z,s.n);m.position.copy(s.n).multiplyScalar(.49);c.add(m);s.mesh=m;}}
+  sc.add(new THREE.HemisphereLight(0xffffff,0x3a4468,.68));
+  const d=new THREE.DirectionalLight(0xffffff,.5);d.position.set(5,8,6);sc.add(d);
+  const sd=document.createElement('canvas');sd.width=sd.height=64;const g=sd.getContext('2d'),gr=g.createRadialGradient(32,32,2,32,32,32);gr.addColorStop(0,'rgba(0,0,0,.55)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);
+  const sp=new THREE.Mesh(new THREE.PlaneGeometry(6,6),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sd),transparent:true,depthWrite:false}));sp.rotation.x=-Math.PI/2;sp.position.y=-2.1;sc.add(sp);
+  this.camera=new THREE.PerspectiveCamera(38,1,.1,100);this.camera.position.set(4.6,3.8,6.2);
+  this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+  this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));host.appendChild(this.renderer.domElement);
+  this.controls=new THREE.OrbitControls(this.camera,this.renderer.domElement);
+  Object.assign(this.controls,{enableDamping:true,dampingFactor:.08,enablePan:false,minDistance:5,maxDistance:14});
+  new ResizeObserver(()=>this.resize()).observe(host);this.resize();
+  const loop=()=>{requestAnimationFrame(loop);this.controls.update();this.renderer.render(this.scene,this.camera);};loop();
+ }
+ resize(){const w=this.host.clientWidth,h=this.host.clientHeight;if(!w||!h)return;this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();}
+ paint(cells){for(const c of this.model.cubies)for(const s of c.userData.st){const v=cells[s.i];s.mesh.material.color.set(v<0?EMPTY:COLORS[v].h);}}
+ view(k){const P={def:[4.6,3.8,6.2],front:[0,.01,8.2],top:[0,8.2,.01]}[k],cam=this.camera.position;
+  gsap.to(cam,{x:P[0],y:P[1],z:P[2],duration:.8,ease:'power2.inOut',onUpdate:()=>this.controls.update()});}
+}
+
+/* ===== CubeAnimator: nội suy góc xoay bằng GSAP (requestAnimationFrame), xoay từng lớp ===== */
+const reduceMotion=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+class CubeAnimator{
+ constructor(model){this.model=model;this.cur=null;this.speed=1;}
+ turn(mv){return new Promise(res=>{
+  const h=this.model.begin(mv),p={a:0},dur=reduceMotion()?.01:Math.abs(mv.q)===2?.66:.46;
+  const tw=gsap.to(p,{a:mv.angle,duration:dur,ease:'power2.inOut',onUpdate:()=>h.set(p.a),onComplete:()=>{h.end(mv.angle);this.cur=null;res(true);}});
+  tw.timeScale(this.speed);this.cur={tw,h,res};});}
+ pause(){if(this.cur)this.cur.tw.pause();}
+ resume(){if(this.cur)this.cur.tw.resume();}
+ cancel(){const c=this.cur;if(!c)return;c.tw.kill();c.h.abort();this.cur=null;c.res(false);}
+ setSpeed(s){this.speed=s;if(this.cur)this.cur.tw.timeScale(s);}
+}
+
+/* ===== SolutionController: tiến trình giải, snapshot từng bước, tiến/lùi/nhảy bước ===== */
+class SolutionController{
+ constructor(model,anim,onUpdate,onStep,onDone){Object.assign(this,{model,anim,onUpdate,onStep,onDone});this.moves=[];this.snaps=[];this.idx=0;this.playing=false;this.loop=0;}
+ get n(){return this.moves.length;}
+ load(moves,faceIdx){ // dựng snapshot bằng chính hàm xoay của mô hình rồi tự kiểm tra kết quả
+  this.halt();const m=this.model;m.restore(m.home);this.snaps=[m.snap()];
+  for(const mv of moves){m.turn(mv);this.snaps.push(m.snap());}
+  const out=m.facelets(faceIdx),ok=out.every((v,i)=>v===(i/9|0));
+  m.restore(this.snaps[0]);this.moves=ok?moves:[];this.idx=0;this.onUpdate();return ok;}
+ clear(){this.halt();this.moves=[];this.snaps=[];this.idx=0;this.model.restore(this.model.home);this.onUpdate();}
+ halt(){this.loop++;this.playing=false;this.anim.cancel();}
+ async step(k){const ok=await this.anim.turn(this.moves[k]);if(ok){this.idx=k+1;this.onStep();this.onUpdate();}return ok;}
+ async autoplay(){const id=++this.loop;this.playing=true;this.onUpdate();
+  while(this.playing&&id===this.loop&&this.idx<this.n){if(!await this.step(this.idx)||id!==this.loop)return;}
+  if(id===this.loop){this.playing=false;this.onUpdate();if(this.idx>=this.n&&this.n)this.onDone();}}
+ pause(){this.playing=false;this.anim.pause();this.onUpdate();}
+ resume(){if(this.anim.cur){this.playing=true;this.anim.resume();this.onUpdate();}else{if(this.idx>=this.n)this.seek(0);this.autoplay();}}
+ seek(k){this.halt();this.idx=Math.max(0,Math.min(this.n,k));this.model.restore(this.snaps[this.idx]);this.onUpdate();}
+ async next(){if(this.anim.cur){this.seek(this.idx+1);return;}if(this.idx>=this.n)return;this.halt();await this.step(this.idx);this.onUpdate();}
+ prev(){this.seek(this.anim.cur?this.idx:this.idx-1);}
+ replay(){this.seek(0);this.autoplay();}
+}
+
+/* ===== UIController ===== */
+const $=s=>document.querySelector(s);
+function toast(msg,k='ok'){const t=$('#toast');t.textContent=msg;t.dataset.k=k;gsap.killTweensOf(t);
+ gsap.timeline().fromTo(t,{autoAlpha:0,y:16},{autoAlpha:1,y:0,duration:.25}).to(t,{autoAlpha:0,y:8,duration:.3,delay:k==='err'?4.5:2.4});}
+class UIController{
+ constructor(){
+  this.cm=new ColorManager();this.inp=new RubikInput(this.cm,()=>this.onCells());this.check=null;
+  this.solver=new CubeSolver(s=>this.solverState(s));
+  this.c3=new Cube3D($('#gl'));this.anim=new CubeAnimator(this.c3.model);
+  this.sc=new SolutionController(this.c3.model,this.anim,()=>this.renderSol(),()=>this.tick(),()=>this.finished());
+  this.buildStatic();this.bind();this.onCells();this.renderSol();this.intro();
+ }
+ solverState(s){const p=$('#status');p.dataset.k=s==='ready'?'ok':s==='error'?'err':'';
+  p.textContent=s==='ready'?'Bộ giải sẵn sàng':s==='error'?'Không tải được bộ giải (cần Internet)':'Đang tải bộ giải…';if(this.c3)this.renderInput();}
+ buildStatic(){
+  $('#logo').innerHTML=[0,2,5,3,0,2,1,4,5].map((c,i)=>`<rect x="${1+(i%3)*12}" y="${1+(i/3|0)*12}" width="11" height="11" rx="2.5" fill="${COLORS[c].h}"/>`).join('');
+  $('#tabs').innerHTML=[...FACES].map((f,i)=>`<button class="tab" role="tab" data-f="${i}" title="${FACE_VI[f][0].toUpperCase()+FACE_VI[f].slice(1)}">${f}</button>`).join('');
+  $('#pal').innerHTML=COLORS.map((c,i)=>`<button class="sw" data-c="${i}" style="background:${c.h}" aria-pressed="${i===0}">${c.n}<small></small></button>`).join('')+'<button class="sw era" data-c="-1" aria-pressed="false">Xóa màu</button>';
+  const pos={U:[2,1],L:[1,2],F:[2,2],R:[3,2],B:[4,2],D:[2,3]};
+  $('#net').innerHTML=[...FACES].map((f,i)=>`<button class="mini" data-f="${i}" aria-label="Mặt ${f}" style="grid-column:${pos[f][0]};grid-row:${pos[f][1]}">${'<i></i>'.repeat(9)}</button>`).join('');
+  $('#legend').innerHTML=[...FACES].map(f=>`<span><b>${f}</b> ${FACE_VI[f]} ↻ · <b>${f}'</b> ↺ · <b>${f}2</b> 180°</span>`).join('');
+ }
+ bind(){
+  const on=(s,ev,fn)=>$(s).addEventListener(ev,fn);
+  on('#tabs','click',e=>{const b=e.target.closest('[data-f]');if(b){this.inp.face=+b.dataset.f;this.renderInput();}});
+  on('#net','click',e=>{const b=e.target.closest('[data-f]');if(b){this.inp.face=+b.dataset.f;this.renderInput();}});
+  on('#pal','click',e=>{const b=e.target.closest('[data-c]');if(b){this.cm.active=+b.dataset.c;this.renderInput();}});
+  on('#board','click',e=>{const b=e.target.closest('[data-i]');if(b)this.inp.paint(+b.dataset.i);});
+  on('#board','pointerover',e=>{const b=e.target.closest('[data-i]');if(b)this.cellInfo(+b.dataset.i);});
+  on('#btnUndo','click',()=>{if(!this.inp.undoLast())toast('Không còn thao tác để hoàn tác.','err');});
+  on('#btnClear','click',()=>{const a=Array(54).fill(-1);CENTERS.forEach((i,f)=>a[i]=this.inp.cells[i]);this.inp.setAll(a);toast('Đã xóa các ô, giữ lại màu tâm.');});
+  on('#btnSolved','click',()=>{this.inp.setAll(Array.from({length:54},(_,i)=>SCHEME[i/9|0]));toast('Đã điền Rubik ở trạng thái đã giải.');});
+  on('#btnShuffle','click',()=>{const m=new CubeModel();MoveParser.parse(MoveParser.scramble()).forEach(v=>m.turn(v));
+   this.inp.setAll(m.facelets(Array.from({length:54},(_,i)=>SCHEME[i/9|0])));toast('Đã xáo trộn bằng 22 lượt xoay hợp lệ.');});
+  on('#btnCheck','click',()=>this.runCheck());
+  on('#btnSolve','click',()=>this.solve());
+  on('#btnHelp','click',()=>{const d=$('#help');d.showModal?d.showModal():d.setAttribute('open','');});
+  on('#btnHelpClose','click',()=>{const d=$('#help');d.close?d.close():d.removeAttribute('open');});
+  document.querySelectorAll('.views [data-v]').forEach(b=>b.addEventListener('click',()=>this.c3.view(b.dataset.v)));
+  on('#bPlay','click',()=>{const s=this.sc;if(s.playing)s.pause();else s.resume();});
+  on('#bNext','click',()=>this.sc.next());on('#bPrev','click',()=>this.sc.prev());
+  on('#bReset','click',()=>this.sc.seek(0));on('#bReplay','click',()=>this.sc.replay());
+  on('#spd','change',e=>this.anim.setSpeed(+e.target.value));
+  on('#prog','input',e=>this.sc.seek(+e.target.value));
+  on('#list','click',e=>{const b=e.target.closest('[data-k]');if(b)this.sc.seek(+b.dataset.k);});
+  on('#btnCopy','click',()=>this.copy());
+ }
+ intro(){if(reduceMotion())return;const h=this.c3.holder;
+  gsap.timeline().from(h.rotation,{y:-2.4,duration:1.4,ease:'power3.out'}).from(h.scale,{x:.4,y:.4,z:.4,duration:1.1,ease:'back.out(1.4)'},0)
+   .from('.panel',{autoAlpha:0,y:14,duration:.5,stagger:.12,clearProps:'all'},0);}
+ cellInfo(i){const c=this.inp.cells[i];$('#cellinfo').textContent=`Ô ${FACES[i/9|0]}${i%9+1}${i%9===4?' (tâm)':''}: ${c<0?'chưa tô màu':COLORS[c].n}`;}
+ onCells(){ // mọi thay đổi màu đều dùng chung một nguồn dữ liệu (inp.cells)
+  if(this.sc&&this.sc.n)this.sc.clear();this.check=null;this.c3.paint(this.inp.cells);this.renderInput();$('#chk').innerHTML='';}
+ renderInput(){
+  const I=this.inp,n=I.counts(),filled=n.reduce((a,b)=>a+b);
+  document.querySelectorAll('#tabs .tab').forEach(b=>b.setAttribute('aria-selected',+b.dataset.f===I.face));
+  document.querySelectorAll('#net .mini').forEach(b=>{b.setAttribute('aria-current',+b.dataset.f===I.face);[...b.children].forEach((e,k)=>{const c=I.cells[+b.dataset.f*9+k];e.style.background=c<0?'':COLORS[c].h;});});
+  $('#hint').innerHTML=`<b>Mặt ${FACES[I.face]} (${FACE_VI[FACES[I.face]]}).</b> ${FACE_HINT[FACES[I.face]]}`;
+  $('#board').innerHTML=Array.from({length:9},(_,k)=>{const i=I.face*9+k,c=I.cells[i];
+   return `<button class="cell${i%9===4?' ctr':''}${i===I.sel?' sel':''}" data-i="${i}" style="${c<0?'':'background:'+COLORS[c].h}" aria-label="Ô ${FACES[I.face]}${k+1}${k===4?' (tâm)':''}: ${c<0?'chưa tô':COLORS[c].n}"></button>`;}).join('');
+  document.querySelectorAll('#pal .sw').forEach(b=>{const c=+b.dataset.c;b.setAttribute('aria-pressed',c===this.cm.active);if(c>=0){b.querySelector('small').textContent=n[c]+'/9';b.classList.toggle('over',n[c]>9);}});
+  const rdy=this.solver&&this.solver.ready;$('#btnSolve').disabled=filled<54||!rdy;
+  $('#btnSolve').title=filled<54?`Cần tô đủ 54 ô (còn thiếu ${54-filled})`:!rdy?'Đang chờ bộ giải khởi tạo':'';
+ }
+ runCheck(){const r=CubeValidator.validate(this.inp.cells);this.check=r;const box=$('#chk');
+  if(!r.ok){box.innerHTML=r.errors.map(e=>`<div class="msg er">${e}</div>`).join('');toast('Rubik chưa hợp lệ. Xem chi tiết bên dưới.','err');return r;}
+  box.innerHTML=r.solved?'<div class="msg ok">Hợp lệ. Rubik này đã được giải sẵn, không cần xoay thêm.</div>':
+   ['Đủ 54 ô, mỗi màu đúng 9 lần, 6 màu tâm khác nhau.','8 viên góc và 12 viên cạnh đều tồn tại trên Rubik chuẩn.','Xoắn góc, lật cạnh và tính chẵn lẻ hoán vị đều đúng.'].map(t=>`<div class="msg ok">${t}</div>`).join('');
+  toast(r.solved?'Rubik đã được giải sẵn.':'Rubik hợp lệ, có thể giải.');return r;}
+ async solve(){
+  const r=this.runCheck();if(!r.ok||r.solved)return;
+  $('#busy').hidden=false;const t0=performance.now();
+  try{
+   const sol=await this.solver.solve(r.letters);if(typeof sol!=='string'||!sol.trim())throw new Error('Bộ giải không tìm được lời giải cho trạng thái này.');
+   const moves=MoveParser.parse(sol);this.ms=Math.round(performance.now()-t0);this.algo=moves.map(m=>m.t).join(' ');
+   if(!this.sc.load(moves,r.faceIdx))throw new Error('Lời giải không khớp với mô hình 3D nên không được phát. Hãy kiểm tra lại màu đã nhập.');
+   this.buildList();toast(`Đã tìm thấy lời giải ${moves.length} bước.`);$('#sol').scrollIntoView({behavior:reduceMotion()?'auto':'smooth',block:'nearest'});this.sc.autoplay();
+  }catch(e){this.sc.clear();toast(e.message,'err');}finally{$('#busy').hidden=true;}
+ }
+ buildList(){$('#list').innerHTML=this.sc.moves.map((m,i)=>`<li data-i="${i}"><button data-k="${i}" title="Đưa mô hình tới trước bước này"><b class="n">${i+1}</b><b class="m">${m.t}</b><span>${MoveParser.text(m)}</span><span class="s"></span></button></li>`).join('');}
+ renderSol(){
+  const s=this.sc,n=s.n,has=n>0,done=s.idx>=n&&has;
+  $('#mN').textContent=has?n:'–';$('#mD').textContent=has?`${s.idx}/${n}`:'–';$('#mT').textContent=has?this.ms+' ms':'–';
+  $('#algo').textContent=has?this.algo:'Chưa có lời giải. Nhập màu, kiểm tra rồi bấm “Bắt đầu giải”.';
+  if(!has)$('#list').innerHTML='';
+  const p=$('#prog');p.max=n;p.value=s.idx;p.disabled=!has;
+  ['#btnCopy','#bReset','#bPrev','#bNext','#bReplay','#bPlay'].forEach(q=>$(q).disabled=!has);
+  $('#bPlay').textContent=!has?'Bắt đầu':s.playing?'Tạm dừng':done?'Chạy lại':s.idx>0||this.anim.cur?'Tiếp tục':'Bắt đầu';
+  $('#bPrev').disabled=!has||(s.idx===0&&!this.anim.cur);$('#bNext').disabled=!has||done;
+  document.querySelectorAll('#list li').forEach((li,i)=>{li.className=i<s.idx?'done':i===s.idx&&!done?'cur':'';li.querySelector('.s').textContent=i<s.idx?'Đã xong':i===s.idx&&!done?(s.playing?'Đang thực hiện':'Kế tiếp'):'Chờ';});
+  const cur=s.moves[s.idx],now=$('#now');
+  if(!has){now.innerHTML='<div class="chip">–</div><p>Chưa có bước nào.</p><span class="st"></span>';}
+  else if(done){now.innerHTML=`<div class="chip">✓</div><p>Hoàn thành: Rubik đã được giải.</p><span class="st">${n}/${n} bước</span>`;}
+  else{const q=cur.q;now.innerHTML=`<div class="chip">${cur.t}<i aria-hidden="true">${Math.abs(q)===2?'↻↻':q>0?'↻':'↺'}</i></div><p>${MoveParser.text(cur)}.</p><span class="st">Bước ${s.idx+1}/${n} · ${s.playing?'Đang thực hiện':'Chờ thực hiện'}</span>`;}
+  const act=document.querySelector('#list li.cur');if(act){const L=$('#list');L.scrollTop=act.offsetTop-L.offsetTop-L.clientHeight/2+act.clientHeight/2;}
+ }
+ tick(){if(!$('#snd').checked)return;try{const A=this.ac||(this.ac=new(window.AudioContext||window.webkitAudioContext)()),o=A.createOscillator(),g=A.createGain();
+  o.frequency.value=320;g.gain.setValueAtTime(.12,A.currentTime);g.gain.exponentialRampToValueAtTime(.001,A.currentTime+.06);o.connect(g);g.connect(A.destination);o.start();o.stop(A.currentTime+.07);}catch(e){}}
+ finished(){toast('Rubik đã được giải xong!');const h=this.c3.holder.scale;gsap.fromTo(h,{x:1,y:1,z:1},{x:1.1,y:1.1,z:1.1,duration:.25,yoyo:true,repeat:1,ease:'power2.out'});}
+ async copy(){const t=this.algo;try{await navigator.clipboard.writeText(t);}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(_){}a.remove();}toast('Đã sao chép thuật toán.');}
+}
+if(window.THREE&&window.gsap&&THREE.OrbitControls){
+ try{window.app=new UIController();}
+ catch(e){document.querySelector('main').innerHTML='<p class="fallback">Không khởi tạo được khung 3D (trình duyệt cần hỗ trợ WebGL). '+String(e.message||e)+'</p>';}
+}else{document.querySelector('main').innerHTML='<p class="fallback">Không tải được Three.js hoặc GSAP. Hãy kiểm tra kết nối Internet rồi tải lại trang.</p>';$('#status').textContent='Thiếu thư viện';}
+</script>
+</body>
+</html>
